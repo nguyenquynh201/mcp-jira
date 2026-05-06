@@ -4,10 +4,35 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import axios, { AxiosInstance } from "axios";
 import { z } from "zod";
 
-const JIRA_BASE_URL = process.env.JIRA_BASE_URL || "https://jira.ikara.co";
-const JIRA_USERNAME = process.env.JIRA_USERNAME || "";
-const JIRA_PASSWORD = process.env.JIRA_PASSWORD || "";
-const JIRA_TOKEN = process.env.JIRA_TOKEN || "";
+// Lọc placeholder chưa resolve (vd: "${user_config.jira_token}") thành empty
+function clean(v: string | undefined): string {
+  if (!v) return "";
+  if (v.startsWith("${") && v.endsWith("}")) return "";
+  return v.trim();
+}
+
+const JIRA_BASE_URL = clean(process.env.JIRA_BASE_URL) || "https://jira.ikara.co";
+const JIRA_USERNAME = clean(process.env.JIRA_USERNAME);
+const JIRA_PASSWORD = clean(process.env.JIRA_PASSWORD);
+const JIRA_TOKEN = clean(process.env.JIRA_TOKEN);
+
+function mask(s: string): string {
+  if (!s) return "(empty)";
+  if (s.length <= 4) return "***";
+  return s.slice(0, 2) + "***" + s.slice(-2);
+}
+
+// Log auth method để debug (stderr -> hiện trong mcp-server log)
+console.error(`[mcp-jira] BASE_URL: ${JIRA_BASE_URL}`);
+if (JIRA_TOKEN) {
+  console.error(`[mcp-jira] Auth method: Bearer Token (${mask(JIRA_TOKEN)})`);
+} else if (JIRA_USERNAME && JIRA_PASSWORD) {
+  console.error(`[mcp-jira] Auth method: Basic (user=${JIRA_USERNAME}, pass=${mask(JIRA_PASSWORD)})`);
+} else {
+  console.error(
+    `[mcp-jira] ⚠️ THIẾU CREDENTIALS! USERNAME="${JIRA_USERNAME}" PASSWORD=${mask(JIRA_PASSWORD)} TOKEN=${mask(JIRA_TOKEN)}`
+  );
+}
 
 // Custom field IDs - mỗi Jira instance có ID khác nhau.
 // Chạy tool `list_custom_fields` để tìm ID đúng cho instance của bạn,
@@ -45,10 +70,23 @@ const server = new McpServer({
 
 function errorText(err: unknown): string {
   if (axios.isAxiosError(err)) {
+    const status = err.response?.status;
     const data = err.response?.data;
-    return `Lỗi Jira (${err.response?.status}): ${
-      typeof data === "object" ? JSON.stringify(data) : String(data)
-    }`;
+    const detail = typeof data === "object" ? JSON.stringify(data) : String(data);
+
+    let hint = "";
+    if (status === 401) {
+      hint =
+        "\n\n💡 Lỗi xác thực. Kiểm tra lại trong Claude Desktop → Settings → Extensions → Jira (Ikara) → Configure:\n" +
+        "  - Username + Password đúng chưa?\n" +
+        "  - Nếu Jira yêu cầu Personal Access Token (PAT), tạo PAT tại https://jira.ikara.co/secure/ViewProfile.jspa và điền vào ô Personal Access Token thay vì password.";
+    } else if (status === 403) {
+      hint = "\n\n💡 Account đã đăng nhập nhưng không có quyền thực hiện action này.";
+    } else if (status === 404) {
+      hint = "\n\n💡 Không tìm thấy resource. Kiểm tra project key, issue key có đúng không.";
+    }
+
+    return `Lỗi Jira (HTTP ${status}): ${detail}${hint}`;
   }
   return String(err);
 }
