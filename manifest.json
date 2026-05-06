@@ -2,7 +2,7 @@
   "dxt_version": "0.1",
   "name": "mcp-jira",
   "display_name": "Jira (Ikara)",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Tạo, tìm kiếm, cập nhật issues trên Jira https://jira.ikara.co",
   "long_description": "MCP server cho phép quản lý Jira issues trực tiếp từ Claude Desktop. Hỗ trợ tạo issue, tìm kiếm bằng JQL, đổi trạng thái, thêm comment, liệt kê projects.",
   "author": {
