@@ -1,0 +1,65 @@
+name: Build & Release DXT
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install all dependencies (cho TypeScript build)
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npx tsc
+
+      - name: Prune devDependencies (giảm size DXT)
+        run: npm prune --omit=dev
+
+      - name: Install DXT CLI
+        run: npm install -g @anthropic-ai/dxt
+
+      - name: Pack DXT
+        run: dxt pack
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "MCP Jira ${{ github.ref_name }}"
+          body: |
+            ## MCP Jira v${{ steps.version.outputs.VERSION }}
+
+            ### Cài đặt
+            1. Tải file `mcp-jira.dxt` bên dưới
+            2. Mở Claude Desktop → Settings → Extensions
+            3. Kéo thả file `.dxt` vào → Install
+            4. Nhập username/password Jira → Save
+
+            ### Hướng dẫn sử dụng
+            Xem [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) và [prompts.md](https://github.com/${{ github.repository }}/blob/main/prompts.md)
+          files: |
+            mcp-jira.dxt
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
