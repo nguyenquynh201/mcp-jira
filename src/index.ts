@@ -65,33 +65,8 @@ const agile = makeAxios(`${JIRA_BASE_URL}/rest/agile/1.0`);
 
 const server = new McpServer({
   name: "mcp-jira",
-  version: "1.0.2",
+  version: "1.0.3",
 });
-
-// Debug tool: trả về status auth qua response để debug
-server.tool(
-  "debug_auth",
-  "Debug: trả về trạng thái env vars và auth method đang dùng (mask sensitive)",
-  {},
-  async () => {
-    const lines = [
-      `Version: 1.0.2`,
-      `BASE_URL: ${JIRA_BASE_URL}`,
-      `USERNAME: "${JIRA_USERNAME}" (length=${JIRA_USERNAME.length})`,
-      `PASSWORD: ${mask(JIRA_PASSWORD)} (length=${JIRA_PASSWORD.length})`,
-      `TOKEN: ${mask(JIRA_TOKEN)} (length=${JIRA_TOKEN.length})`,
-      ``,
-      `Raw env (chưa qua clean()):`,
-      `  JIRA_BASE_URL = ${JSON.stringify(process.env.JIRA_BASE_URL)}`,
-      `  JIRA_USERNAME = ${JSON.stringify(process.env.JIRA_USERNAME)}`,
-      `  JIRA_PASSWORD = ${process.env.JIRA_PASSWORD ? `(set, ${process.env.JIRA_PASSWORD.length} chars)` : "(unset)"}`,
-      `  JIRA_TOKEN = ${process.env.JIRA_TOKEN ? `(set, ${process.env.JIRA_TOKEN.length} chars)` : "(unset)"}`,
-      ``,
-      `Auth method sẽ dùng: ${JIRA_TOKEN ? "Bearer Token" : JIRA_USERNAME && JIRA_PASSWORD ? "Basic Auth" : "⚠️ KHÔNG CÓ AUTH (anonymous)"}`,
-    ];
-    return { content: [{ type: "text", text: lines.join("\n") }] };
-  }
-);
 
 function errorText(err: unknown): string {
   if (axios.isAxiosError(err)) {
