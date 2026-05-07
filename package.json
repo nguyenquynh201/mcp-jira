@@ -1,12 +1,14 @@
 {
   "name": "mcp-jira",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "",
-  "main": "index.js",
+  "main": "dist/loader.js",
   "scripts": {
-    "start": "tsx src/index.ts",
-    "build": "tsc",
-    "dev": "tsx watch src/index.ts"
+    "start": "tsx src/loader.ts",
+    "build": "npm run build:loader && npm run build:bundle",
+    "build:loader": "tsc",
+    "build:bundle": "esbuild src/server.ts --bundle --platform=node --target=node18 --format=cjs --outfile=dist/bundle.js --minify",
+    "dev": "tsx watch src/loader.ts"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +22,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
+    "esbuild": "^0.28.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   }

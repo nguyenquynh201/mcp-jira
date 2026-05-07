@@ -23,14 +23,11 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Install all dependencies (cho TypeScript build)
+      - name: Install dependencies
         run: npm ci
 
-      - name: Build TypeScript
-        run: npx tsc
-
-      - name: Prune devDependencies (giảm size DXT)
-        run: npm prune --omit=dev
+      - name: Build (loader + bundle)
+        run: npm run build
 
       - name: Install DXT CLI
         run: npm install -g @anthropic-ai/dxt
@@ -49,16 +46,20 @@ jobs:
           body: |
             ## MCP Jira v${{ steps.version.outputs.VERSION }}
 
-            ### Cài đặt
+            ### 🔄 Auto-update enabled
+            Nếu đã cài v1.0.5+ trước đó, **chỉ cần restart Claude Desktop** (⌘+Q rồi mở lại) — bundle mới sẽ tự động được tải về. Không cần tải lại file `.dxt`.
+
+            ### 📦 Cài lần đầu
             1. Tải file `mcp-jira.dxt` bên dưới
             2. Mở Claude Desktop → Settings → Extensions
             3. Kéo thả file `.dxt` vào → Install
             4. Nhập username/password Jira → Save
 
-            ### Hướng dẫn sử dụng
+            ### 📚 Hướng dẫn sử dụng
             Xem [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) và [prompts.md](https://github.com/${{ github.repository }}/blob/main/prompts.md)
           files: |
             mcp-jira.dxt
+            dist/bundle.js
           draft: false
           prerelease: false
         env:

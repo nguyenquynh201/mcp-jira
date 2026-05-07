@@ -1,0 +1,23 @@
+# Source code (đã được bundle thành dist/bundle.js)
+src/
+
+# Dev / build artifacts
+node_modules/
+.github/
+.git/
+.gitignore
+.env
+.env.example
+.claude/
+
+# Markdown docs (không cần trong DXT)
+README.md
+prompts.md
+
+# Config dev
+tsconfig.json
+package-lock.json
+
+# Tránh nesting DXT
+*.dxt
+mcp-jira-*.dxt

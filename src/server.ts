@@ -65,7 +65,7 @@ const agile = makeAxios(`${JIRA_BASE_URL}/rest/agile/1.0`);
 
 const server = new McpServer({
   name: "mcp-jira",
-  version: "1.0.4",
+  version: "1.0.5",
 });
 
 function errorText(err: unknown): string {
