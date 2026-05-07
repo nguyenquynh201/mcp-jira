@@ -65,7 +65,7 @@ const agile = makeAxios(`${JIRA_BASE_URL}/rest/agile/1.0`);
 
 const server = new McpServer({
   name: "mcp-jira",
-  version: "1.0.3",
+  version: "1.0.4",
 });
 
 function errorText(err: unknown): string {
@@ -484,6 +484,67 @@ server.tool(
     try {
       await jira.post(`/issue/${issue_key}/comment`, { body: comment });
       return { content: [{ type: "text", text: `✅ Đã comment vào ${issue_key}.` }] };
+    } catch (err) {
+      return { content: [{ type: "text", text: errorText(err) }], isError: true };
+    }
+  }
+);
+
+server.tool(
+  "delete_issue",
+  "⚠️ XÓA VĨNH VIỄN một issue/task/bug trên Jira. CẢNH BÁO: hành động KHÔNG THỂ HOÀN TÁC. " +
+    "BẮT BUỘC: trước khi gọi tool này, PHẢI hỏi user xác nhận rõ ràng bằng câu '⚠️ Bạn có CHẮC CHẮN muốn xóa <issue_key> không? Hành động này không thể hoàn tác.' " +
+    "Chỉ set confirm=true SAU KHI user trả lời rõ ràng 'có'/'yes'/'xác nhận'/'đồng ý'. " +
+    "Nếu user chỉ nói 'xóa giúp' hoặc lệnh chung chung, gọi với confirm=false để tool yêu cầu xác nhận lại.",
+  {
+    issue_key: z.string().describe("Key của issue cần xóa, ví dụ: KF-1234"),
+    confirm: z
+      .boolean()
+      .describe(
+        "BẮT BUỘC. Phải là true VÀ chỉ sau khi user đã xác nhận rõ ràng trong chat. Nếu chưa hỏi user thì pass false."
+      ),
+    reason: z.string().optional().describe("Lý do xóa (optional, log lại để audit)"),
+  },
+  async ({ issue_key, confirm, reason }) => {
+    if (!confirm) {
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              `⛔ TỪ CHỐI XÓA — chưa có xác nhận từ user.\n\n` +
+              `Hỏi user câu sau (nguyên văn):\n` +
+              `"⚠️ Bạn có CHẮC CHẮN muốn xóa **${issue_key}** không? Hành động này KHÔNG THỂ HOÀN TÁC."\n\n` +
+              `Chỉ gọi lại tool này với confirm=true SAU KHI user trả lời rõ ràng "có"/"yes"/"xác nhận"/"đồng ý".`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    try {
+      // Lấy info issue trước để hiện trong response (tránh xóa nhầm)
+      let summary = "(không lấy được)";
+      try {
+        const info = await jira.get(`/issue/${issue_key}`, {
+          params: { fields: "summary" },
+        });
+        summary = info.data.fields.summary;
+      } catch {
+        // Nếu không get được vẫn cho phép thử delete
+      }
+
+      await jira.delete(`/issue/${issue_key}`);
+
+      const reasonLine = reason ? `\nLý do: ${reason}` : "";
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🗑️ Đã xóa issue **${issue_key}**: "${summary}"${reasonLine}\n\n⚠️ Hành động này không thể hoàn tác.`,
+          },
+        ],
+      };
     } catch (err) {
       return { content: [{ type: "text", text: errorText(err) }], isError: true };
     }

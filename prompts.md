@@ -144,6 +144,20 @@ Chuyển KF-1234 sang Done
 Comment vào KF-1234: "Đã test trên iOS 17, hoạt động tốt. Đang test thêm Android."
 ```
 
+### ⚠️ Xóa issue (cẩn thận — không thể hoàn tác)
+```
+Xóa issue KF-1234
+```
+Claude sẽ hỏi lại để xác nhận:
+> *"⚠️ Bạn có CHẮC CHẮN muốn xóa KF-1234 không? Hành động này KHÔNG THỂ HOÀN TÁC."*
+
+→ Trả lời **"có"** / **"yes"** / **"xác nhận"** thì mới thực sự xóa. Nếu chỉ muốn hủy, trả lời "không" hoặc bỏ qua.
+
+Có thể kèm lý do xóa để audit:
+```
+Xóa KF-1234, lý do: tạo trùng với KF-5678
+```
+
 ### Xem các project có sẵn
 ```
 Liệt kê tất cả projects trên Jira
