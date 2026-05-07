@@ -5,8 +5,9 @@
   "main": "dist/loader.js",
   "scripts": {
     "start": "tsx src/loader.ts",
-    "build": "npm run build:loader && npm run build:bundle",
-    "build:loader": "tsc",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && npm run build:loader && npm run build:bundle",
+    "build:loader": "esbuild src/loader.ts --platform=node --target=node18 --format=cjs --outfile=dist/loader.js",
     "build:bundle": "esbuild src/server.ts --bundle --platform=node --target=node18 --format=cjs --outfile=dist/bundle.js --minify",
     "dev": "tsx watch src/loader.ts"
   },
