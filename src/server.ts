@@ -11,6 +11,22 @@ function clean(v: string | undefined): string {
   return v.trim();
 }
 
+// Zephyr rich-text fields chứa HTML — bỏ tag + decode entity cơ bản cho dễ đọc.
+function strip(v: string | undefined): string {
+  if (!v) return "";
+  return v
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/(p|div|li)>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 const JIRA_BASE_URL = clean(process.env.JIRA_BASE_URL) || "https://jira.ikara.co";
 const JIRA_USERNAME = clean(process.env.JIRA_USERNAME);
 const JIRA_PASSWORD = clean(process.env.JIRA_PASSWORD);
@@ -62,10 +78,13 @@ function makeAxios(baseURL: string): AxiosInstance {
 
 const jira = makeAxios(`${JIRA_BASE_URL}/rest/api/2`);
 const agile = makeAxios(`${JIRA_BASE_URL}/rest/agile/1.0`);
+// Zephyr Scale (TM4J) Server/DC API — test case (KF-T…), test run/cycle (KF-C…), execution (KF-E…).
+// Override path qua env nếu instance dùng bản khác (vd /rest/tests/1.0).
+const zephyr = makeAxios(`${JIRA_BASE_URL}/${clean(process.env.JIRA_ZEPHYR_PATH) || "rest/atm/1.0"}`);
 
 const server = new McpServer({
   name: "mcp-jira",
-  version: "1.0.5",
+  version: "1.0.6",
 });
 
 function errorText(err: unknown): string {
@@ -563,6 +582,85 @@ server.tool("list_projects", "Liệt kê tất cả projects", {}, async () => {
     return { content: [{ type: "text", text: errorText(err) }], isError: true };
   }
 });
+
+server.tool(
+  "get_test_case",
+  "Lấy chi tiết một Test Case Zephyr Scale (key dạng KF-T...): tên, trạng thái, precondition, và các bước test (description/data/expected).",
+  { test_case_key: z.string() },
+  async ({ test_case_key }) => {
+    try {
+      const res = await zephyr.get(`/testcase/${test_case_key}`);
+      const d = res.data;
+      const lines = [
+        `Test Case: ${d.key} — ${d.name}`,
+        `Trạng thái: ${d.status || "—"} | Priority: ${d.priority || "—"}`,
+        `Folder: ${d.folder || "—"}`,
+        d.issueLinks?.length ? `Liên kết issue: ${d.issueLinks.join(", ")}` : null,
+        `Kết quả test gần nhất: ${d.lastTestResultStatus || "—"}`,
+        `Precondition: ${d.precondition || "—"}`,
+        d.objective ? `Mục tiêu: ${d.objective}` : null,
+      ].filter(Boolean) as string[];
+
+      const steps = d.testScript?.steps as
+        | Array<{ index: number; description: string; testData: string; expectedResult: string }>
+        | undefined;
+      if (steps?.length) {
+        lines.push("Các bước:");
+        [...steps]
+          .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+          .forEach((s, i) => {
+            lines.push(`  ${i + 1}. ${strip(s.description)}`);
+            if (s.testData) lines.push(`     - Data: ${strip(s.testData)}`);
+            if (s.expectedResult) lines.push(`     - Expected: ${strip(s.expectedResult)}`);
+          });
+      } else if (d.testScript?.text) {
+        lines.push(`Script: ${strip(d.testScript.text)}`);
+      }
+      return { content: [{ type: "text", text: lines.join("\n") }] };
+    } catch (err) {
+      return { content: [{ type: "text", text: errorText(err) }], isError: true };
+    }
+  }
+);
+
+server.tool(
+  "get_test_cycle",
+  "Lấy một Test Cycle/Test Run Zephyr Scale (key dạng KF-C...): danh sách test case + kết quả execution (KF-E) Pass/Fail/Blocked. Kèm tên từng test case.",
+  { test_run_key: z.string() },
+  async ({ test_run_key }) => {
+    try {
+      const res = await zephyr.get(`/testrun/${test_run_key}`);
+      const d = res.data;
+      const items = (d.items || []) as Array<{
+        testCaseKey: string;
+        status: string;
+        executedBy?: string;
+      }>;
+      // Lấy tên từng test case (song song) để dễ đọc.
+      const names = await Promise.all(
+        items.map((it) =>
+          zephyr
+            .get(`/testcase/${it.testCaseKey}`)
+            .then((r) => r.data.name as string)
+            .catch(() => "")
+        )
+      );
+      const lines = [
+        `Test Cycle: ${d.key} — ${d.name}`,
+        `Issue: ${d.issueKey || "—"} | Số test case: ${d.testCaseCount ?? items.length}`,
+        "Kết quả:",
+      ];
+      items.forEach((it, i) => {
+        lines.push(
+          `  - [${it.status || "—"}] ${it.testCaseKey}${names[i] ? " " + names[i] : ""}`
+        );
+      });
+      return { content: [{ type: "text", text: lines.join("\n") }] };
+    } catch (err) {
+      return { content: [{ type: "text", text: errorText(err) }], isError: true };
+    }
+  }
+);
 
 async function main() {
   const transport = new StdioServerTransport();

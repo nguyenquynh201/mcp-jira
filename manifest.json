@@ -2,7 +2,7 @@
   "dxt_version": "0.1",
   "name": "mcp-jira",
   "display_name": "Jira (Ikara)",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Tạo, tìm kiếm, cập nhật issues trên Jira https://jira.ikara.co (auto-update)",
   "long_description": "MCP server quản lý Jira issues trực tiếp từ Claude Desktop. Hỗ trợ tạo/xem/sửa/xóa issue, tìm kiếm bằng JQL, đổi trạng thái, thêm comment, liệt kê projects/epics/sprints. Có cơ chế self-update — chỉ cài 1 lần, các update logic về sau tự động qua GitHub release khi restart Claude Desktop.",
   "author": {
